@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Dashboard</h1>
+
+    <!-- Button to open Add Item modal -->
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal">
+        <i class="bi bi-plus-circle"></i> Add New Item
+    </button>
+
+    <!-- Button to trigger QR Code scanning -->
+    <button type="button" class="btn btn-primary" onclick="window.open('{% url 'qr_scanner' %}', '_blank', 'width=800,height=600')">
+        <i class="bi bi-camera"></i> Scan QR Code
+    </button>
+
+    <!-- Add Item Modal -->
+    <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addItemModalLabel">Add New Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'add_item' %}">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        {% if form.errors %}
+                            <div class="alert alert-danger mt-3">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <p>{{ field.label }}: {{ error }}</p>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary mt-3">Add Item</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Scan Modal -->
+    <div class="modal fade" id="scanQrModal" tabindex="-1" aria-labelledby="scanQrModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="scanQrModalLabel">Scan QR Code</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- QR Code Reader container -->
+                    <div id="reader" style="width: 100%; height: 400px;"></div>
+                    <p id="qr-result" class="mt-3">Scan a QR Code to see the result here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List of items -->
+    <table class="table mt-5">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Quantity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>
+                    <a href="{% url 'edit_item' item.id %}" class="btn btn-warning">Edit</a>
+                    <a href="{% url 'delete_item' item.id %}" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+<!-- Include necessary scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
+<script>
+    let html5QrcodeScanner;
+
+    // Function to start the QR code scanner
+    function startQrScanner() {
+        console.log("Starting QR Code Scanner...");
+
+        // Callback for successfully decoded QR code
+        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+            console.log("QR Code Detected: ", decodedText); // Debugging output
+            document.getElementById('qr-result').innerText = 'QR Code Result: ' + decodedText;
+            // Optionally stop scanning after the first QR code is detected
+            html5QrcodeScanner.stop().then(() => {
+                console.log("QR Code Scanner Stopped");
+            }).catch((err) => {
+                console.log("Error stopping the scanner: ", err);
+            });
+        };
+
+        // Callback for errors
+        const qrCodeErrorCallback = (errorMessage) => {
+            console.log("QR Scanner Error: ", errorMessage); // Debugging output
+        };
+
+        // Initialize the QR Code reader
+        html5QrcodeScanner = new Html5Qrcode("reader");
+
+        // Start scanning
+        html5QrcodeScanner.start(
+            { facingMode: "environment" }, // Use the back camera
+            {
+                fps: 10, // Frames per second for scanning
+                qrbox: 250 // Size of the scanning box
+            },
+            qrCodeSuccessCallback,
+            qrCodeErrorCallback
+        ).catch((err) => {
+            console.log("Error starting QR scanner:", err); // Debugging output
+        });
+    }
+
+    // When the QR scan modal is shown, start scanning
+    $('#scanQrModal').on('shown.bs.modal', function () {
+        console.log("Modal is shown, starting the QR scanner.");
+        // Wait a short moment for the modal to finish rendering before starting the scanner
+        setTimeout(startQrScanner, 500);
+    });
+
+    // When the modal is hidden, stop the scanner
+    $('#scanQrModal').on('hidden.bs.modal', function () {
+        console.log("Modal is hidden, stopping the QR scanner.");
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.stop().then(() => {
+                console.log("QR Code Scanner Stopped");
+            }).catch((err) => {
+                console.log("Error stopping the scanner: ", err);
+            });
+        }
+    });
+</script>
