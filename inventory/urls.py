@@ -9,6 +9,9 @@ from inventory import views
 urlpatterns = [
     path('login/', login_view, name='login'),
     path('dashboard/', dashboard, name='dashboard'),
+    path('reports/', views.reports, name='reports'),
+    path('export/csv/', views.export_csv, name='export_csv'),  # Check this line
+    path('export/pdf/', views.export_pdf, name='export_pdf'),  # Check this line
     path('add-item/', add_item, name='add_item'),
     path('edit-item/<int:item_id>/', edit_item, name='edit_item'),
     path('delete-item/<int:item_id>/', delete_item, name='delete_item'),

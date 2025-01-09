@@ -6,6 +6,19 @@
 <div class="container mt-5">
     <h1 class="text-center">Dashboard</h1>
 
+    <!-- Search Bar and Button -->
+    <form method="GET" action="{% url 'dashboard' %}" id="searchForm">
+        <div class="d-flex justify-content-between mb-4">
+            <div class="input-group w-50">
+                <!-- Search input -->
+                <input type="text" id="searchInput" name="q" class="form-control" 
+                    value="{{ query }}" placeholder="Search for items..." 
+                    oninput="handleSearchInput()">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+
     <!-- Button to open Add Item modal -->
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal">
         <i class="bi bi-plus-circle"></i> Add New Item
@@ -73,8 +86,8 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
-            {% for item in items %}
+        <tbody id="itemTable">
+            {% for item in page_obj %}
             <tr>
                 <td>{{ item.name }}</td>
                 <td>{{ item.quantity }}</td>
@@ -83,19 +96,73 @@
                     <a href="{% url 'delete_item' item.id %}" class="btn btn-danger">Delete</a>
                 </td>
             </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center">No items found</td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-</div>
 
+    <!-- Pagination Controls -->
+    <div class="pagination mt-4 d-flex justify-content-center">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page=1" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span> First
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span> Previous
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item disabled">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span> Next
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span> Last
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
 {% endblock %}
 
-<!-- Include necessary scripts -->
+<!-- Include necessary scripts first -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
 <script>
+    // Function to handle the search input change
+    function handleSearchInput() {
+        var handleSearchInput = ""
+        let searchInput = document.getElementById('searchInput');
+        let query = searchInput.value;
+
+        // If the input is empty, reset the query and reload the page
+        if (query === "") {
+            window.location.href = "{% url 'dashboard' %}";  // No query parameter
+        }
+    }
+</script>
+
+<script>
+    // QR Code Scanner logic
     let html5QrcodeScanner;
 
     // Function to start the QR code scanner
@@ -155,3 +222,24 @@
         }
     });
 </script>
+
+<!-- Optional: Custom CSS for pagination and buttons -->
+<style>
+    .pagination .page-link {
+        border-radius: 0.25rem;
+        font-weight: 500;
+        color: #007bff;
+    }
+    .pagination .page-link:hover {
+        background-color: #007bff;
+        color: white;
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+</style>
