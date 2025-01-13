@@ -1,7 +1,7 @@
 # inventory/views.py
 
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Item, Transaction
+from .models import Category, Item, Transaction
 from .forms import ItemForm, TransactionForm, BarcodeScanForm
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
@@ -247,6 +247,8 @@ def delete_item(request, item_id):
     return redirect('dashboard')
 
 
+
+
 @login_required
 def item_list(request):
     items = Item.objects.all()
@@ -257,8 +259,35 @@ def qr_scanner(request):
     return render(request, 'qr_scanner.html')
 
 
+@login_required
+def item_detail(request, item_id):
+    item = get_object_or_404(Item, id=item_id)  # Use item_id to fetch the item by ID
+    categories = Category.objects.all()  # Get all categories for dropdown if editing
+    if request.method == 'POST':
+        # Handle form submission for item editing
+        item.name = request.POST.get('name')
+        item.barcode = request.POST.get('barcode')
+        item.category_id = request.POST.get('category')  # Assuming category is passed as ID
+        item.quantity = request.POST.get('quantity')
+        item.save()
+        return redirect('item_detail', item_id=item.id)  # Redirect to updated item detail
+
+    return render(request, 'item_detail.html', {'item': item, 'categories': categories})
+
 
 # views.py
+@login_required
+def checkout_item(request):
+    if request.method == 'POST':
+        item_id = request.POST.get('item_id')
+        item = get_object_or_404(Item, id=item_id)
+
+        # Handle the checkout logic here (e.g., reduce quantity, create transaction, etc.)
+        item.quantity -= 1  # Example: reduce quantity by 1
+        item.save()
+
+        # Redirect back to the dashboard or any other page
+        return redirect('dashboard')
 
 
 

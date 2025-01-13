@@ -10,10 +10,7 @@
     <form method="GET" action="{% url 'dashboard' %}" id="searchForm">
         <div class="d-flex justify-content-between mb-4">
             <div class="input-group w-50">
-                <!-- Search input -->
-                <input type="text" id="searchInput" name="q" class="form-control" 
-                    value="{{ query }}" placeholder="Search for items..." 
-                    oninput="handleSearchInput()">
+                <input type="text" id="searchInput" name="q" class="form-control" value="{{ query }}" placeholder="Search for items..." oninput="handleSearchInput()">
                 <button type="submit" class="btn btn-primary">Search</button>
             </div>
         </div>
@@ -22,11 +19,6 @@
     <!-- Button to open Add Item modal -->
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal">
         <i class="bi bi-plus-circle"></i> Add New Item
-    </button>
-
-    <!-- Button to trigger QR Code scanning -->
-    <button type="button" class="btn btn-primary" onclick="window.open('{% url 'qr_scanner' %}', '_blank', 'width=800,height=600')">
-        <i class="bi bi-camera"></i> Scan QR Code
     </button>
 
     <!-- Add Item Modal -->
@@ -60,27 +52,11 @@
         </div>
     </div>
 
-    <!-- QR Code Scan Modal -->
-    <div class="modal fade" id="scanQrModal" tabindex="-1" aria-labelledby="scanQrModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="scanQrModalLabel">Scan QR Code</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- QR Code Reader container -->
-                    <div id="reader" style="width: 100%; height: 400px;"></div>
-                    <p id="qr-result" class="mt-3">Scan a QR Code to see the result here.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- List of items -->
     <table class="table mt-5">
         <thead>
             <tr>
+                <th>Item ID</th> <!-- New column for Item ID -->
                 <th>Item Name</th>
                 <th>Quantity</th>
                 <th>Actions</th>
@@ -89,20 +65,74 @@
         <tbody id="itemTable">
             {% for item in page_obj %}
             <tr>
-                <td>{{ item.name }}</td>
+                <td>{{ item.id }}</td> <!-- Display Item ID here -->
+                <td>
+                    <!-- Item Name Link -->
+                    <a href="{% url 'item_detail' item.id %}" class="item-link">
+                        {{ item.name }}
+                    </a>
+                </td>
                 <td>{{ item.quantity }}</td>
                 <td>
-                    <a href="{% url 'edit_item' item.id %}" class="btn btn-warning">Edit</a>
-                    <a href="{% url 'delete_item' item.id %}" class="btn btn-danger">Delete</a>
+                    <!-- Button to trigger Edit Item Modal -->
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal" data-item-id="{{ item.id }}">
+                        <i class="bi bi-pencil-square"></i> Edit Item
+                    </button>
+                    
+                    <!-- Delete Button -->
+                    <a href="{% url 'delete_item' item.id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this item?')">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" class="text-center">No items found</td>
+                <td colspan="4" class="text-center">No items found</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- Edit Item Modal (Hidden initially) -->
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editItemModalLabel">Edit Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" id="editItemForm">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Item Name</label>
+                            <input type="text" class="form-control" name="name" id="editItemName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="barcode" class="form-label">Barcode</label>
+                            <input type="text" class="form-control" name="barcode" id="editItemBarcode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" name="category" id="editItemCategory" required>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quantity" class="form-label">Quantity</label>
+                            <input type="number" class="form-control" name="quantity" id="editItemQuantity" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Pagination Controls -->
     <div class="pagination mt-4 d-flex justify-content-center">
@@ -141,105 +171,5 @@
         </nav>
     </div>
 </div>
+
 {% endblock %}
-
-<!-- Include necessary scripts first -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    // Function to handle the search input change
-    function handleSearchInput() {
-        var handleSearchInput = ""
-        let searchInput = document.getElementById('searchInput');
-        let query = searchInput.value;
-
-        // If the input is empty, reset the query and reload the page
-        if (query === "") {
-            window.location.href = "{% url 'dashboard' %}";  // No query parameter
-        }
-    }
-</script>
-
-<script>
-    // QR Code Scanner logic
-    let html5QrcodeScanner;
-
-    // Function to start the QR code scanner
-    function startQrScanner() {
-        console.log("Starting QR Code Scanner...");
-
-        // Callback for successfully decoded QR code
-        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
-            console.log("QR Code Detected: ", decodedText); // Debugging output
-            document.getElementById('qr-result').innerText = 'QR Code Result: ' + decodedText;
-            // Optionally stop scanning after the first QR code is detected
-            html5QrcodeScanner.stop().then(() => {
-                console.log("QR Code Scanner Stopped");
-            }).catch((err) => {
-                console.log("Error stopping the scanner: ", err);
-            });
-        };
-
-        // Callback for errors
-        const qrCodeErrorCallback = (errorMessage) => {
-            console.log("QR Scanner Error: ", errorMessage); // Debugging output
-        };
-
-        // Initialize the QR Code reader
-        html5QrcodeScanner = new Html5Qrcode("reader");
-
-        // Start scanning
-        html5QrcodeScanner.start(
-            { facingMode: "environment" }, // Use the back camera
-            {
-                fps: 10, // Frames per second for scanning
-                qrbox: 250 // Size of the scanning box
-            },
-            qrCodeSuccessCallback,
-            qrCodeErrorCallback
-        ).catch((err) => {
-            console.log("Error starting QR scanner:", err); // Debugging output
-        });
-    }
-
-    // When the QR scan modal is shown, start scanning
-    $('#scanQrModal').on('shown.bs.modal', function () {
-        console.log("Modal is shown, starting the QR scanner.");
-        // Wait a short moment for the modal to finish rendering before starting the scanner
-        setTimeout(startQrScanner, 500);
-    });
-
-    // When the modal is hidden, stop the scanner
-    $('#scanQrModal').on('hidden.bs.modal', function () {
-        console.log("Modal is hidden, stopping the QR scanner.");
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.stop().then(() => {
-                console.log("QR Code Scanner Stopped");
-            }).catch((err) => {
-                console.log("Error stopping the scanner: ", err);
-            });
-        }
-    });
-</script>
-
-<!-- Optional: Custom CSS for pagination and buttons -->
-<style>
-    .pagination .page-link {
-        border-radius: 0.25rem;
-        font-weight: 500;
-        color: #007bff;
-    }
-    .pagination .page-link:hover {
-        background-color: #007bff;
-        color: white;
-    }
-    .pagination .page-item.disabled .page-link {
-        color: #6c757d;
-    }
-    .pagination .page-item.active .page-link {
-        background-color: #007bff;
-        border-color: #007bff;
-        color: white;
-    }
-</style>
